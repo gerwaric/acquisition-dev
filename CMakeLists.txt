@@ -19,11 +19,11 @@ find_package(Qt6 REQUIRED COMPONENTS Widgets)
 
 qt_standard_project_setup(REQUIRES 6.5.3)
 
-qt_add_executable(acquisition WIN32 MACOSX_BUNDLE MANUAL_FINALIZATION
-    src/main.cpp
-    src/mainwindow.cpp
-    src/mainwindow.h
-    src/mainwindow.ui
+qt_add_executable(acquisition WIN32 MACOSX_BUNDLE
+    acquisition/acquisition/main.cpp
+    acquisition/acquisition/mainwindow.cpp
+    acquisition/acquisition/mainwindow.hpp
+    acquisition/acquisition/forms/mainwindow.ui
 )
 
 target_link_libraries(acquisition PRIVATE Qt::Widgets)
@@ -45,5 +45,3 @@ install(TARGETS acquisition
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
-
-qt_finalize_executable(acquisition)

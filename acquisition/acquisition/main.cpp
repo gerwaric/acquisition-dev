@@ -17,7 +17,7 @@
     along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
-#include "mainwindow.h"
+#include <acquisition/acquisition/mainwindow.hpp>
 
 #include <QApplication>
 
@@ -25,6 +25,5 @@ int main(int argc, char* argv[])
 {
     QApplication a(argc, argv);
     MainWindow w;
-    w.show();
     return a.exec();
 }
