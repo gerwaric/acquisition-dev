@@ -16,25 +16,42 @@
     You should have received a copy of the GNU General Public License
     along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
-
 #pragma once
 
-#include <QMainWindow>
+#include <json_struct/json_struct.h>
 
-QT_BEGIN_NAMESPACE
-namespace Ui {
-    class MainWindow;
-}
-QT_END_NAMESPACE
+#include <acquisition/utils/json.h>
 
-class MainWindow : public QMainWindow
-{
-    Q_OBJECT
+#include <QDateTime>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QString>
+
+#include <optional>
+
+class OAuthToken {
 
 public:
-    MainWindow(QWidget* parent = nullptr);
-    ~MainWindow();
 
-private:
-    Ui::MainWindow* ui;
+    OAuthToken() = default;
+    OAuthToken(const QString& json);
+    OAuthToken(QNetworkReply* const reply);
+
+    bool isValid() const;
+
+    void authorize(QNetworkRequest& request);
+
+    QByteArray access_token;
+    long long int expires_in{ -1 };
+    QByteArray token_type;
+    QByteArray scope;
+    QByteArray sub;
+    QByteArray username;
+    QByteArray refresh_token;
+
+    std::optional<QDateTime> birthday;
+    std::optional<QDateTime> expiration;
+
+    JS_OBJ(access_token, expires_in, token_type, scope, sub, username, refresh_token);
+
 };

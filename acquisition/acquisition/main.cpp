@@ -17,13 +17,13 @@
     along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
 
-#include <acquisition/acquisition/mainwindow.hpp>
+#include <acquisition/main_window.h>
 
 #include <QApplication>
 
 int main(int argc, char* argv[])
 {
     QApplication a(argc, argv);
-    MainWindow w;
+    MainWindow main_window;
     return a.exec();
 }

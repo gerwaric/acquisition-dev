@@ -14,19 +14,32 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(QT NAMES Qt6 REQUIRED COMPONENTS Widgets)
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core HttpServer Network Sql Widgets)
+
+if(MSVC)
+    add_compile_options(/EHsc)
+    add_compile_options(/W4)
+endif()
 
 qt_standard_project_setup(REQUIRES 6.5.3)
 
-qt_add_executable(acquisition WIN32 MACOSX_BUNDLE
-    acquisition/acquisition/main.cpp
-    acquisition/acquisition/mainwindow.cpp
-    acquisition/acquisition/mainwindow.hpp
-    acquisition/acquisition/forms/mainwindow.ui
-)
+qt_add_executable(acquisition WIN32 MACOSX_BUNDLE)
 
-target_link_libraries(acquisition PRIVATE Qt::Widgets)
+add_subdirectory(acquisition)
+add_subdirectory(external/boost-headers-only)
+add_subdirectory(external/json_struct)
+add_subdirectory(external/QsLog)
+
+target_link_libraries(acquisition PRIVATE
+    Qt6::Core
+    Qt6::HttpServer
+    Qt6::Network
+    Qt6::Sql
+    Qt6::Widgets
+    boost-headers-only
+    json_struct
+    QsLog
+)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an

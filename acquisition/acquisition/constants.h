@@ -16,3 +16,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.If not, see < https://www.gnu.org/licenses/>.
 */
+#pragma once
+
+#define APP_NAME                "acquisition"
+#define APP_VERSION_STRING      "0.12.0"
+#define APP_PUBLISHER_EMAIL     "gerwaric@gmail.com"
+#define APP_URL                 "https://github.com/gerwaric/acquisition"
+
+#define USER_AGENT              APP_NAME "/" APP_VERSION_STRING " (contact: " APP_PUBLISHER_EMAIL ")"
