@@ -8,9 +8,12 @@
 #include <QSqlDatabase>
 #include <QString>
 #include <QStringList>
+#include <QVariant>
 
-class LeagueDataStore {
+#include <vector>
 
+class LeagueDataStore : public QObject {
+    Q_OBJECT
 public:
 
     LeagueDataStore();
@@ -18,8 +21,8 @@ public:
     QStringList getCharacterList();
     QStringList getStashList();
 
-    poe_api::Character getCharacter(const QString& id);
-    poe_api::StashTab getStash(const QString& id);
+    std::shared_ptr<poe_api::Character> getCharacter(const QString& character_id);
+    std::shared_ptr<poe_api::StashTab> getStash(const QString& stash_id);
 
     void storeCharacter(const poe_api::Character& character);
     void storeStash(const poe_api::StashTab& stash_tab);
@@ -29,10 +32,6 @@ public slots:
     void setLeague(const QString& league);
 
 private:
-
-    void createTable(const QString& name, const QStringList& columns);
-    QStringList getList(const QString& column, const QString& table);
-    QStringList getSingleValue(const QString& column, const QString& table, const QString& key);
 
     QString m_data_directory;
     QString m_league;

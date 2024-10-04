@@ -1,24 +1,27 @@
 #include <acquisition/tree_node.h>
 
-long long unsigned TreeNode::N = 0;
+long unsigned TreeNode::s_node_count = 0;
 
 // Primary root node
 TreeNode::TreeNode()
-    : m_id(++N)
-    , m_type(NodeType::Root)
+    : m_id(s_node_count++)
+    , m_node_type(NodeType::Root)
+    , m_item_type(ItemType::None)
     , m_parent(nullptr) {}
 
 // Secondary root node
 TreeNode::TreeNode(const QString& name, TreeNode* parent)
-    : m_id(++N)
-    , m_type(NodeType::Root)
+    : m_id(s_node_count++)
+    , m_node_type(NodeType::Root)
+    , m_item_type(ItemType::None)
     , m_parent(parent)
     , m_name(name) {}
 
 // Item node
 TreeNode::TreeNode(const poe_api::Item& item, TreeNode* parent)
-    : m_id(++N)
-    , m_type(NodeType::Item)
+    : m_id(s_node_count++)
+    , m_node_type(NodeType::Item)
+    , m_item_type(ItemType::Other)
     , m_parent(parent)
     , m_item(&item)
 {
@@ -29,7 +32,9 @@ TreeNode::TreeNode(const poe_api::Item& item, TreeNode* parent)
 
 // StashTab node
 TreeNode::TreeNode(const poe_api::StashTab& stash, TreeNode* parent)
-    : m_id(++N), m_type(NodeType::StashTab)
+    : m_id(s_node_count++)
+    , m_node_type(NodeType::StashTab)
+    , m_item_type(ItemType::None)
     , m_parent(parent)
     , m_stash(&stash)
 {
@@ -43,7 +48,9 @@ TreeNode::TreeNode(const poe_api::StashTab& stash, TreeNode* parent)
 
 // Character node
 TreeNode::TreeNode(const poe_api::Character& character, TreeNode* parent)
-    : m_id(++N), m_type(NodeType::Character)
+    : m_id(s_node_count++)
+    , m_node_type(NodeType::Character)
+    , m_item_type(ItemType::None)
     , m_parent(parent)
     , m_character(&character)
 {
@@ -63,7 +70,9 @@ TreeNode::TreeNode(const poe_api::Character& character, TreeNode* parent)
 
 // Item collection node (e.g. one character's inventory or equipment)
 TreeNode::TreeNode(const QString& collection, const std::vector<poe_api::Item>& items, TreeNode* parent)
-    : m_id(++N), m_type(NodeType::Collection)
+    : m_id(s_node_count++)
+    , m_node_type(NodeType::Collection)
+    , m_item_type(ItemType::None)
     , m_parent(parent)
     , m_name(collection)
 {
@@ -99,7 +108,7 @@ int TreeNode::row() const
 int TreeNode::columnCount() const
 {
     return 2;
-    switch (m_type) {
+    switch (m_node_type) {
     case NodeType::Item:
         return 2;
     case NodeType::StashTab:
@@ -114,7 +123,7 @@ int TreeNode::columnCount() const
 
 QVariant TreeNode::data(int column) const
 {
-    switch (m_type) {
+    switch (m_node_type) {
     case NodeType::Item:
         switch (column) {
         case 0:

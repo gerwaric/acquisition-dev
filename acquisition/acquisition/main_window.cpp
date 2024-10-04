@@ -54,13 +54,6 @@ MainWindow::MainWindow()
 
     connect(this, &MainWindow::leagueChanged, &m_league_data, &LeagueDataStore::setLeague);
 
-    // Menu Actions
-    //connect(this, &MainWindow::refreshCharacterList, &endpoint_manager, &EndpointManager::listCharacters);
-    //connect(this, &MainWindow::refreshStashList, &endpoint_manager,
-    //    [this]() {
-    //        endpoint_manager.listStashes("Standard");
-    //    });
-
     // Refreshing Characters and Stash Tabs
     connect(&m_endpoint_manager, &EndpointManager::characterListReceived, this, &MainWindow::receiveCharacterList);
     connect(&m_endpoint_manager, &EndpointManager::characterReceived, this, &MainWindow::receiveCharacter);
@@ -169,11 +162,11 @@ void MainWindow::receiveLeagueList(std::shared_ptr<std::vector<poe_api::League>>
 
 void MainWindow::refreshAll()
 {
-    characters_pending = 0;
+    m_characters_pending = 0;
     m_endpoint_manager.listCharacters();
 
-    stashes_pending = 0;
-    //m_endpoint_manager.listStashes(m_current_league);
+    m_stashes_pending = 0;
+    // m_endpoint_manager.listStashes(m_current_league);
 }
 
 void MainWindow::receiveCharacterList(std::shared_ptr<std::vector<poe_api::Character>> characters)
@@ -181,7 +174,7 @@ void MainWindow::receiveCharacterList(std::shared_ptr<std::vector<poe_api::Chara
     m_character_list = std::move(characters);
     for (const auto& character : *m_character_list) {
         if (0 == m_current_league.compare(character.league.value_or(""), Qt::CaseInsensitive)) {
-            ++characters_pending;
+            ++m_characters_pending;
             m_endpoint_manager.getCharacter(character.name);
         };
     };
@@ -192,24 +185,24 @@ void MainWindow::receiveCharacter(std::shared_ptr<poe_api::Character> character)
     if (!character) {
         return;
     };
-    --characters_pending;
+    --m_characters_pending;
+    m_league_data.storeCharacter(*character);
     m_tree_model.appendCharacter(*character);
     m_tree_view.reset();
-    m_league_data.setCharacter(character);
     m_characters[character->id] = character;
     if (refreshComplete()) {
         finishRefresh();
     };
     m_status_label.setText(QString("Pending %1 stash tabs and %2 characters").arg(
-        QString::number(stashes_pending),
-        QString::number(characters_pending)));
+        QString::number(m_stashes_pending),
+        QString::number(m_characters_pending)));
 }
 
 void MainWindow::receiveStashList(std::shared_ptr<std::vector<poe_api::StashTab>> stashes)
 {
     m_stash_list = stashes;
     for (const auto& stash : *stashes) {
-        ++stashes_pending;
+        ++m_stashes_pending;
         m_endpoint_manager.getStash(m_current_league, stash.id);
         if (stash.children) {
             QLOG_ERROR() << "Stash list has children:" << stash.name;
@@ -222,11 +215,11 @@ void MainWindow::receiveStash(std::shared_ptr<poe_api::StashTab> stash)
     if (!stash) {
         return;
     };
-    --stashes_pending;
+    --m_stashes_pending;
     if (stash->children) {
         for (const auto& child : stash->children.value()) {
             continue;
-            ++stashes_pending;
+            ++m_stashes_pending;
             m_endpoint_manager.getStash(m_current_league, stash->id, child.id);
             if (child.children) {
                 QLOG_ERROR() << "Stash has grandchildren:" << stash->name;
@@ -239,13 +232,13 @@ void MainWindow::receiveStash(std::shared_ptr<poe_api::StashTab> stash)
         finishRefresh();
     };
     m_status_label.setText(QString("Pending %1 stash tabs and %2 characters").arg(
-        QString::number(stashes_pending),
-        QString::number(characters_pending)));
+        QString::number(m_stashes_pending),
+        QString::number(m_characters_pending)));
 }
 
 bool MainWindow::refreshComplete()
 {
-    return (characters_pending == 0) && (stashes_pending == 0);
+    return (m_characters_pending == 0) && (m_stashes_pending == 0);
 }
 
 void MainWindow::finishRefresh()

@@ -105,7 +105,7 @@ private:
 
     TreeModel m_tree_model;
 
-    int characters_pending{ 0 };
-    int stashes_pending{ 0 };
+    int m_characters_pending{ 0 };
+    int m_stashes_pending{ 0 };
 
 };

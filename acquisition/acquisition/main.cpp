@@ -19,10 +19,20 @@
 
 #include <acquisition/main_window.h>
 
+#include <acquisition/constants.h>
+
+#include <QsLog/QsLog.h>
+
 #include <QApplication>
 
 int main(int argc, char* argv[])
 {
+    QsLogging::Logger& logger = QsLogging::Logger::instance();
+    logger.setLoggingLevel(QsLogging::TraceLevel);
+    logger.addDestination(QsLogging::DestinationFactory::MakeDebugOutputDestination());
+
+    QLOG_INFO() << "Starting " APP_NAME " version " APP_VERSION_STRING;
+
     QApplication a(argc, argv);
     MainWindow main_window;
     return a.exec();

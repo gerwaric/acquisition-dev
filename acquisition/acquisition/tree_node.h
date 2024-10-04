@@ -53,11 +53,13 @@ private:
     int rowOfChild(const TreeNode* child) const;
 
     enum class NodeType { Item, StashTab, Character, Collection, Root };
+    enum class ItemType { None, Equipable, Stackable, Other };
 
-    static long long unsigned N;
-    const long long unsigned m_id;
+    static long unsigned s_node_count;
+    const long unsigned m_id;
 
-    const NodeType m_type;
+    const NodeType m_node_type;
+    const ItemType m_item_type;
     const TreeNode* m_parent;
 
     const poe_api::Item* m_item{ nullptr };

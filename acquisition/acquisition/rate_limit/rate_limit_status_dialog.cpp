@@ -104,12 +104,12 @@ void RateLimitStatusDialog::onPolicyUpdate(const RateLimitPolicy& policy)
         for (const auto& item : rule.items()) {
             QTreeWidgetItem* rule_item = new QTreeWidgetItem(policy_item);
             rule_item->setFlags(Qt::ItemIsEnabled);
-            rule_item->setText(0, QString("%1 (%2s)").arg(rule.name()).arg(item.limit().period()));
+            rule_item->setText(0, QString("%1 (%2s)").arg(rule.name()).arg(item.limit().period));
             rule_item->setText(2, QString("%1 / %2").arg(
-                QString::number(item.state().hits()),
-                QString::number(item.limit().hits())));
-            rule_item->setText(3, QString::number(item.limit().period()));
-            rule_item->setText(4, QString::number(item.limit().restriction()));
+                QString::number(item.state().hits),
+                QString::number(item.limit().hits)));
+            rule_item->setText(3, QString::number(item.limit().period));
+            rule_item->setText(4, QString::number(item.limit().restriction));
             rule_item->setText(5, utils::QtEnumToString(item.status()));
             rule_item->setExpanded(true);
         };

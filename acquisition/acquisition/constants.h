@@ -19,7 +19,7 @@
 #pragma once
 
 #define APP_NAME                "acquisition"
-#define APP_VERSION_STRING      "0.12.0"
+#define APP_VERSION_STRING      "1.0.0-alpha.1"
 #define APP_PUBLISHER_EMAIL     "gerwaric@gmail.com"
 #define APP_URL                 "https://github.com/gerwaric/acquisition"
 

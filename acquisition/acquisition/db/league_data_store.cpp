@@ -35,44 +35,120 @@ void LeagueDataStore::setLeague(const QString& league)
         return;
     };
 
-    createTable("characters", {
-            "character_id TEXT PRIMARY KEY",
-            "last_update TEXT",
-            "character_json BLOB"
-        });
-
-    createTable("stash_tabs", {
-            "stash_id TEXT PRIMARY KEY",
-            "last_update TEXT",
-            "stash_json BLOB"
-        });
-
-    createTable("buyouts", {
-            "item_id TEXT PRIMARY KEY",
-            "last_update TEXT",
-            "buyout_json BLOB)"
-        });
-}
-
-void LeagueDataStore::createTable(const QString& name, const QStringList& columns)
-{
-    QString command = QString("CREATE TABLE IF NOT EXISTS %1 (%2)").arg(name, columns.join(", "));
     QSqlQuery query(m_db);
-    query.prepare(command);
+
+    query.prepare("CREATE TABLE IF NOT EXISTS characters (id TEXT PRIMARY KEY, last_update TEXT, data JSON)");
     if (query.exec() == false) {
-        QLOG_ERROR() << "Failed to create" << name << "table :" << query.lastError().text();
+        QLOG_ERROR() << "League store failed to create character table:" << query.lastError().text();
+    };
+
+    query.prepare("CREATE TABLE IF NOT EXISTS stash_tabs (id TEXT PRIMARY KEY, last_update TEXT, data JSON)");
+    if (query.exec() == false) {
+        QLOG_ERROR() << "League store failed to create stash_tabs table:" << query.lastError().text();
+    };
+
+    query.prepare("CREATE TABLE IF NOT EXISTS buyouts (id TEXT PRIMARY KEY, last_update TEXT, data JSON)");
+    if (query.exec() == false) {
+        QLOG_ERROR() << "League store failed to create buyout table:" << query.lastError().text();
     };
 }
 
 QStringList LeagueDataStore::getCharacterList()
 {
-    return getList("character_id", "characters");
+    QSqlQuery query(m_db);
+    query.prepare("SELECT id FROM characters");
+    if (!query.exec()) {
+        QLOG_ERROR() << "Error selecting characters:" << query.lastError().text();
+        return {};
+    };
+
+    QStringList character_ids;
+    int i = 0;
+    while (query.next()) {
+        ++i;
+        if (query.lastError().isValid()) {
+            QLOG_ERROR() << "Error getting character_id" << i << ":" << query.lastError().text();
+            break;
+        };
+        character_ids.push_back(query.value(0).toString());
+    };
+    return character_ids;
 }
 
 QStringList LeagueDataStore::getStashList()
 {
-    return getList("stash_id", "stash_tabs");
+    QSqlQuery query(m_db);
+    query.prepare("SELECT id FROM stash_tabs");
+    if (!query.exec()) {
+        QLOG_ERROR() << "Error selecting characters:" << query.lastError().text();
+        return {};
+    };
+
+    QStringList stash_ids;
+    int i = 0;
+    while (query.next()) {
+        ++i;
+        if (query.lastError().isValid()) {
+            QLOG_ERROR() << "Error getting stash_id" << i << ":" << query.lastError().text();
+            break;
+        };
+        stash_ids.push_back(query.value(0).toString());
+    };
+    return stash_ids;
 }
+
+std::shared_ptr<poe_api::Character> LeagueDataStore::getCharacter(const QString& id)
+{
+    QSqlQuery query(m_db);
+    query.prepare("SELECT data FROM characters WHERE id = ?");
+    query.bindValue(0, id);
+    if (query.exec()) {
+        QLOG_ERROR() << "Error selecting character with id" << id << ":" << query.lastError().text();
+        return nullptr;
+    };
+
+    if (!query.next()) {
+        if (!query.isActive()) {
+            QLOG_ERROR() << "Error getting character with id" << id << ":" << query.lastError().text();
+        };
+        return nullptr;
+    };
+
+    auto character = std::make_shared<poe_api::Character>();
+    const std::string bytes = query.value(0).toString().toStdString();
+    JS::ParseContext parseContext(bytes);
+    if (parseContext.parseTo(character) != JS::Error::NoError) {
+        QLOG_ERROR() << "Error parsing character:" << parseContext.makeErrorString();
+    };
+    return character;
+}
+
+std::shared_ptr<poe_api::StashTab> LeagueDataStore::getStash(const QString& id)
+{
+    QSqlQuery query(m_db);
+    query.prepare("SELECT data FROM stash_tabs WHERE id = ?");
+    query.bindValue(0, id);
+    if (query.exec()) {
+        QLOG_ERROR() << "Error selecting stash tab with id" << id << ":" << query.lastError().text();
+        return nullptr;
+    };
+
+    if (!query.next()) {
+        if (!query.isActive()) {
+            QLOG_ERROR() << "Error getting stash tab with id" << id << ":" << query.lastError().text();
+        };
+        return nullptr;
+    };
+
+    auto stash_tab = std::make_shared<poe_api::StashTab>();
+    const std::string bytes = query.value(0).toString().toStdString();
+    JS::ParseContext parseContext(bytes);
+    if (parseContext.parseTo(stash_tab) != JS::Error::NoError) {
+        QLOG_ERROR() << "Error parsing character:" << parseContext.makeErrorString();
+    };
+    return stash_tab;
+}
+
 
 void LeagueDataStore::storeCharacter(const poe_api::Character& character)
 {
@@ -80,16 +156,13 @@ void LeagueDataStore::storeCharacter(const poe_api::Character& character)
     const QString json = QString::fromStdString(JS::serializeStruct(character));
 
     QSqlQuery query(m_db);
-    query.prepare("INSERT OR REPLACE INTO characters (character_id, last_update, character_json) VALUES (?, ?)");
+    query.prepare("INSERT OR REPLACE INTO characters (id, last_update, data) VALUES (?, ?, ?)");
     query.bindValue(0, character.id);
     query.bindValue(1, timestamp);
     query.bindValue(2, json);
+
     if (query.exec() == false) {
-        QLOG_ERROR() << QString("Error setting value for '%1' (%2) in '%3': %4").arg(
-            character.name,
-            character.id,
-            m_league,
-            query.lastError().text());
+        QLOG_ERROR() << "Error storing character" << character.name << ":" << query.lastError().text();
     };
 }
 
@@ -99,90 +172,12 @@ void LeagueDataStore::storeStash(const poe_api::StashTab& stash_tab)
     const QString json = QString::fromStdString(JS::serializeStruct(stash_tab));
 
     QSqlQuery query(m_db);
-    query.prepare("INSERT OR REPLACE INTO stash_tabs (stash_id, last_update, stash_json) VALUES (?, ?)");
+    query.prepare("INSERT OR REPLACE INTO stash_tabs (id, last_update, data) VALUES (?, ?, ?)");
     query.bindValue(0, stash_tab.id);
     query.bindValue(1, timestamp);
     query.bindValue(2, json);
+
     if (query.exec() == false) {
-        QLOG_ERROR() << QString("Error setting value for '%1' (%2) in '%3': %4").arg(
-            stash_tab.name,
-            stash_tab.id,
-            m_league,
-            query.lastError().text());
+        QLOG_ERROR() << "Error storing character" << stash_tab.name << ":" << query.lastError().text();
     };
 }
-
-
-
-poe_api::Character LeagueDataStore::getCharacter(const QString& id)
-{
-    poe_api::Character character;
-
-    QSqlQuery query(m_db);
-    query.prepare("SELECT character_json FROM characters WHERE character_id = ?");
-    query.bindValue(0, id);
-    if (query.exec() == false) {
-        QLOG_ERROR() << "Error selecting character with id" << id << ":" << query.lastError().text();
-        return character;
-    };
-    if (query.next() == false) {
-        if (query.isActive() == false) {
-            QLOG_ERROR() << "Error getting character with id" << id << ":" << query.lastError().text();
-        };
-        return character;
-    };
-
-    const std::string bytes = query.value(0).toString().toStdString();
-    JS::ParseContext parseContext(bytes);
-    if (parseContext.parseTo(character) != JS::Error::NoError) {
-        QLOG_ERROR() << "Error parsing character:" << parseContext.makeErrorString();
-    };
-    return character;
-}
-
-
-
-poe_api::StashTab LeagueDataStore::getStash(const QString& id)
-{
-    poe_api::StashTab stash_tab;
-
-    QSqlQuery query(m_db);
-    query.prepare("SELECT stash_json FROM stash_tabs WHERE stash_id = ?");
-    query.bindValue(0, id);
-    if (query.exec() == false) {
-        QLOG_ERROR() << "Error selecting stash tab with id" << id << ":" << query.lastError().text();
-        return stash_tab;
-    };
-    if (query.next() == false) {
-        if (query.isActive() == false) {
-            QLOG_ERROR() << "Error getting stash tab with id" << id << ":" << query.lastError().text();
-        };
-        return stash_tab;
-    };
-
-    const std::string bytes = query.value(0).toString().toStdString();
-    JS::ParseContext parseContext(bytes);
-    if (parseContext.parseTo(stash_tab) != JS::Error::NoError) {
-        QLOG_ERROR() << "Error parsing stash tab:" << parseContext.makeErrorString();
-    };
-    return stash_tab;
-}
-
-QStringList LeagueDataStore::getList(const QString& column, const QString& table)
-{
-    QStringList results;
-    QSqlQuery query(m_db);
-    query.prepare(QString("SELECT %1 FROM %2").arg(column, table));
-    if (query.exec() == false) {
-        QLOG_ERROR() << "Error selecting" << column << "from" << table << ":" << query.lastError().text();
-    };
-    while (query.next()) {
-        if (query.lastError().isValid()) {
-            QLOG_ERROR() << "Error getting next" << column << "from" << table << ":" << query.lastError().text();
-            break;
-        };
-        results.push_back(query.value(0).toString());
-    };
-    return results;
-
-};

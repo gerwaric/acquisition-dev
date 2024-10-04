@@ -114,60 +114,6 @@ class RateLimitPolicy : public QObject {
 
 public:
 
-    enum class Status { Unknown, Ok, Borderline, Violation, Invalid };
-    Q_ENUM(Status)
-
-    class Element {
-    public:
-        Element(const QByteArray& header_fragment);
-        int hits() const { return hits_; };
-        int period() const { return period_; };
-        int restriction() const { return restriction_; };
-    private:
-        int hits_;
-        int period_;
-        int restriction_;
-    };
-
-    class Item {
-    public:
-        Item(const QByteArray& limit_fragment, const QByteArray& state_fragment);
-        void Check(const Item& other, const QString& prefix) const;
-        const Element& limit() const { return limit_; };
-        const Element& state() const { return state_; };
-        Status status() const { return status_; };
-        QDateTime GetNextSafeSend(const boost::circular_buffer<QDateTime>& history) const;
-        int EstimateDuration(int request_count, int minimum_delay_msec) const;
-    private:
-        Element limit_;
-        Element state_;
-        Status status_;
-    };
-
-    class Rule {
-    public:
-        Rule(const QByteArray& rule_name, QNetworkReply* const reply);
-        void Check(const Rule& other, const QString& prefix) const;
-        const QString& name() const { return name_; };
-        const std::vector<Item>& items() const { return items_; };
-        Status status() const { return status_; };
-        int maximum_hits() const { return maximum_hits_; };
-    private:
-        QString name_;
-        std::vector<Item> items_;
-        int maximum_hits_;
-        Status status_;
-    };
-
-    RateLimitPolicy(QNetworkReply* const reply);
-    void Check(const RateLimitPolicy& other) const;
-    const QString& name() const { return name_; };
-    const std::vector<Rule>& rules() const { return rules_; };
-    Status status() const { return status_; };
-    int maximum_hits() const { return maximum_hits_; };
-    QDateTime GetNextSafeSend(const boost::circular_buffer<QDateTime>& history);
-    QDateTime EstimateDuration(int request_count, int minimum_delay_msec) const;
-
     static QByteArray parseHeader(QNetworkReply* const reply, const QByteArray& name);
     static QByteArrayList parseHeaderList(QNetworkReply* const reply, const QByteArray& name, const char delim);
     static QByteArray parseRateLimitPolicy(QNetworkReply* const reply);
@@ -177,9 +123,62 @@ public:
     static QDateTime parseDate(QNetworkReply* const reply);
     static int parseStatus(QNetworkReply* const reply);
 
+    enum class Status { Unknown, Ok, Borderline, Violation, Invalid };
+    Q_ENUM(Status)
+
+    class Element {
+    public:
+        Element(const QByteArray& header_fragment);
+        int hits{ -1 };
+        int period{ -1 };
+        int restriction{ -1 };
+    };
+
+    class Item {
+    public:
+        Item(const QByteArray& limit_fragment, const QByteArray& state_fragment);
+        inline const Element& limit() const { return m_limit; };
+        inline const Element& state() const { return m_state; };
+        inline int maximum_hits() const { return m_maximum_hits; };
+        inline Status status() const { return m_status; };
+        void Check(const Item& other, const QString& prefix) const;
+        QDateTime GetNextSafeSend(const boost::circular_buffer<QDateTime>& history) const;
+        int EstimateDuration(int request_count, int minimum_delay_msec) const;
+    private:
+        Element m_limit;
+        Element m_state;
+        int m_maximum_hits{ -1 };
+        Status m_status{ Status::Unknown };
+    };
+
+    class Rule {
+    public:
+        Rule(const QByteArray& rule_name, QNetworkReply* const reply);
+        inline const QString& name() const { return m_name; };
+        inline const std::vector<Item>& items() const { return m_items; };
+        inline const int maximum_hits() const { return m_maximum_hits; };
+        inline const Status status() const { return m_status; };
+        void Check(const Rule& other, const QString& prefix) const;
+    private:
+        QString m_name;
+        std::vector<Item> m_items;
+        int m_maximum_hits{ -1 };
+        Status m_status{ Status::Unknown };
+    };
+
+    RateLimitPolicy(QNetworkReply* const reply);
+    inline const QString& name() const { return m_name; };
+    inline const std::vector<Rule>& rules() const { return m_rules; };
+    inline const int maximum_hits() const { return m_maximum_hits; };
+    inline const Status status() const { return m_status; };
+
+    void Check(const RateLimitPolicy& other) const;
+    QDateTime GetNextSafeSend(const boost::circular_buffer<QDateTime>& history);
+    QDateTime EstimateDuration(int request_count, int minimum_delay_msec) const;
+
 private:
-    QString name_;
-    std::vector<Rule> rules_;
-    int maximum_hits_;
-    Status status_;
+    QString m_name;
+    std::vector<Rule> m_rules;
+    int m_maximum_hits{ -1 };
+    Status m_status;
 };
