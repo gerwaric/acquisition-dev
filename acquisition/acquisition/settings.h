@@ -2,22 +2,33 @@
 
 #include <QsLog/QsLog.h>
 
+#include <QObject>
+
 #include <QSettings>
 
-class Settings
-{
+class Settings : public QObject {
+    Q_OBJECT
 public:
+    Settings(QObject* parent, const QString& data_directory);
+    QString username() const;
+    QString league() const;
+    QString sessionId() const;
+    QsLogging::Level logLevel() const;
 
-    Settings();
+    void sendSignals() const;
 
-    QString sessionId();
-    void setSessionId(const QString& sessionId);
+signals:
+    void usernameChanged(const QString& username) const;
+    void leagueChanged(const QString& league) const;
+    void sessionIdChanged(const QString& session_id) const;
+    void logLevelChanged(QsLogging::Level level) const;
 
-    QsLogging::Level logLevel();
+public slots:
+    void setUsername(const QString& username);
+    void setLeague(const QString& league);
+    void setSessionId(const QString& session_id);
     void setLogLevel(QsLogging::Level level);
 
 private:
-
-    QSettings m_settings;
-
+    std::unique_ptr<QSettings> m_settings;
 };

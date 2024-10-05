@@ -1,5 +1,7 @@
 #pragma once
 
+#include <QsLog/QsLog.h>
+
 #include <QByteArray>
 #include <QDateTime>
 #include <QMetaEnum>
@@ -29,6 +31,10 @@ namespace utils {
 
     QDateTime parseRFC2822(const std::string& rfc2822_date);
 
+    QsLogging::Level logLevel(const QString& value);
+
+    QString logLevelName(QsLogging::Level level);
+
     template<typename QEnum>
     QString QtEnumToString(const QEnum value)
     {
@@ -36,8 +42,13 @@ namespace utils {
     }
 
     template<typename QEnum>
-    QString QtEnumToStdString(const QEnum value)
+    QEnum QtStringtoEnum(const QString& key)
     {
-        return QtEnumToString(value).toStdString();
+        bool ok = false;
+        int value = QMetaEnum::fromType<QEnum>().keyToValue(key.toUtf8().constData(), &ok);
+        if (!ok) {
+            QLOG_ERROR() << "Error converting string to" << typeid(QEnum).name() << ":" << key;
+        };
+        return static_cast<QEnum>(value);
     }
 }

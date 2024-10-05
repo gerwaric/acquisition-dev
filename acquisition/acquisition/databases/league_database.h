@@ -12,11 +12,10 @@
 
 #include <vector>
 
-class LeagueDataStore : public QObject {
+class LeagueDatabase : public QObject {
     Q_OBJECT
 public:
-
-    LeagueDataStore();
+    LeagueDatabase(QObject *parent);
 
     QStringList getCharacterList();
     QStringList getStashList();
@@ -29,11 +28,12 @@ public:
 
 public slots:
 
+    void setUsername(const QString& username);
     void setLeague(const QString& league);
 
 private:
 
-    QString m_data_directory;
+    QString m_username;
     QString m_league;
     QSqlDatabase m_db;
 

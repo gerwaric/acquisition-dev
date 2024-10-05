@@ -31,6 +31,8 @@
 #include <QStatusBar>
 #include <QWidget>
 
+#include <QDockWidget>
+
 const OAuthSettings MainWindow::s_oauth_settings = {
     "https://www.pathofexile.com/oauth/authorize",
     "https://www.pathofexile.com/oauth/token",
@@ -39,30 +41,23 @@ const OAuthSettings MainWindow::s_oauth_settings = {
     "http://127.0.0.1",
     "/auth/path-of-exile" };
 
-MainWindow::MainWindow()
+MainWindow::MainWindow(const QString& data_directory)
     : QMainWindow(nullptr)
     , m_network_manager(this)
+    , m_settings(this, data_directory)
+    , m_user_data(this)
+    , m_league_data(this)
     , m_oauth_manager(this, m_network_manager, s_oauth_settings)
     , m_rate_limiter(this, m_network_manager)
     , m_endpoint_manager(this, m_rate_limiter)
 {
     setupUserInterface();
+    connectSlots();
 
-    // Authentication
-    connect(&m_oauth_manager, &OAuthManager::accessGranted, &m_rate_limiter, &RateLimiter::setToken);
-    connect(&m_endpoint_manager, &EndpointManager::leagueListReceived, this, &MainWindow::receiveLeagueList);
-
-    connect(this, &MainWindow::leagueChanged, &m_league_data, &LeagueDataStore::setLeague);
-
-    // Refreshing Characters and Stash Tabs
-    connect(&m_endpoint_manager, &EndpointManager::characterListReceived, this, &MainWindow::receiveCharacterList);
-    connect(&m_endpoint_manager, &EndpointManager::characterReceived, this, &MainWindow::receiveCharacter);
-    connect(&m_endpoint_manager, &EndpointManager::stashListReceived, this, &MainWindow::receiveStashList);
-    connect(&m_endpoint_manager, &EndpointManager::stashReceived, this, &MainWindow::receiveStash);
+    m_settings.sendSignals();
 
     show();
     authenticate();
-
 }
 
 void MainWindow::setupUserInterface()
@@ -79,9 +74,9 @@ void MainWindow::setupUserInterface()
     menuBar()->addMenu(&m_league_menu);
 
     m_refresh_menu.setTitle("Refresh");
-    //menu->addAction("Refresh Charcter List", this, &MainWindow::refreshCharacterList);
-    //menu->addAction("Refresh Stash List", this, &MainWindow::refreshStashList);
-    m_refresh_menu.addAction("Full refresh", this, &MainWindow::refreshAll);
+    m_refresh_menu.addAction("Update Everything", this, &MainWindow::refreshAll);
+    m_refresh_menu.addSeparator();
+    m_refresh_menu.addAction("Refresh Settings", this, []() {});
     m_refresh_menu.setEnabled(false);
     menuBar()->addMenu(&m_refresh_menu);
 
@@ -109,19 +104,54 @@ void MainWindow::setupUserInterface()
     m_tree_view.setModel(&m_tree_model);
     m_tree_view.setUniformRowHeights(true);
 
+    QDockWidget dock_left;
+
     QHBoxLayout* layout = new QHBoxLayout;
     layout->addWidget(&m_tree_view);
     centralWidget()->setLayout(layout);
 }
 
+void MainWindow::connectSlots()
+{
+    // Authentication
+    connect(&m_oauth_manager, &OAuthManager::accessGranted, &m_rate_limiter, &RateLimiter::setToken);
+    connect(&m_oauth_manager, &OAuthManager::accessGranted, this,
+        [&](const OAuthToken& token) {
+            m_settings.setUsername(token.username);
+        });
+
+    connect(&m_settings, &Settings::usernameChanged, &m_user_data, &UserDatabase::setUsername);
+    connect(&m_settings, &Settings::usernameChanged, &m_league_data, &LeagueDatabase::setUsername);
+    connect(&m_settings, &Settings::leagueChanged, &m_league_data, &LeagueDatabase::setLeague);
+
+    // Refreshing Characters and Stash Tabs
+    connect(&m_endpoint_manager, &EndpointManager::leagueListReceived, this, &MainWindow::receiveLeagueList);
+    connect(&m_endpoint_manager, &EndpointManager::characterListReceived, this, &MainWindow::receiveCharacterList);
+    connect(&m_endpoint_manager, &EndpointManager::characterReceived, this, &MainWindow::receiveCharacter);
+    connect(&m_endpoint_manager, &EndpointManager::stashListReceived, this, &MainWindow::receiveStashList);
+    connect(&m_endpoint_manager, &EndpointManager::stashReceived, this, &MainWindow::receiveStash);
+}
+
 void MainWindow::authenticate()
 {
-    AuthenticationDialog* login = new AuthenticationDialog();
-    connect(login, &AuthenticationDialog::requested, &m_oauth_manager, &OAuthManager::requestAccess);
-    connect(&m_oauth_manager, &OAuthManager::accessGranted, login, &AuthenticationDialog::setToken);
-    login->exec();
+    AuthenticationDialog login;
+    connect(&login, &AuthenticationDialog::requested, &m_oauth_manager, &OAuthManager::requestAccess);
+    connect(&m_oauth_manager, &OAuthManager::accessGranted, &login, &AuthenticationDialog::setToken);
 
-    m_endpoint_manager.getLeagues();
+    if (!m_settings.username().isEmpty()) {
+        const OAuthToken token = m_user_data.getStruct<OAuthToken>("oauth_token");
+        if (token.isValid()) {
+            login.setToken(token);
+        };
+    };
+
+    int result = login.exec();
+    disconnect(&login, &AuthenticationDialog::requested, &m_oauth_manager, nullptr);
+    disconnect(&m_oauth_manager, &OAuthManager::accessGranted, &login, nullptr);
+
+    if (result == QDialog::Accepted) {
+        m_endpoint_manager.getLeagues();
+    };
 
     activateWindow();
     raise();
@@ -132,9 +162,9 @@ void MainWindow::receiveLeagueList(std::shared_ptr<std::vector<poe_api::League>>
     m_league_menu.clear();
     for (const auto& league : *leagues) {
 
-        const QString leauge_name = league.id;
+        const QString league_name = league.id;
 
-        QString pretty_name = league.id;
+        QString pretty_name = league_name;
         pretty_name.replace("HC ", "Hardcore ");
         pretty_name.replace("R ", "Ruthless ");
         pretty_name.replace("Solo Self-Found", "SSF");
@@ -146,12 +176,11 @@ void MainWindow::receiveLeagueList(std::shared_ptr<std::vector<poe_api::League>>
         connect(action, &QAction::triggered, this,
             [=]() {
                 action->setChecked(true);
-                if (m_current_league_action) {
-                    m_current_league_action->setChecked(false);
+                if (m_active_league_action) {
+                    m_active_league_action->setChecked(false);
                 };
-                m_current_league = leauge_name;
-                m_current_league_action = action;
-                emit leagueChanged(leauge_name);
+                m_active_league_action = action;
+                m_settings.setLeague(league_name);
             });
 
         m_league_menu.addAction(action);
@@ -166,14 +195,15 @@ void MainWindow::refreshAll()
     m_endpoint_manager.listCharacters();
 
     m_stashes_pending = 0;
-    // m_endpoint_manager.listStashes(m_current_league);
+    m_endpoint_manager.listStashes(m_settings.league());
 }
 
 void MainWindow::receiveCharacterList(std::shared_ptr<std::vector<poe_api::Character>> characters)
 {
     m_character_list = std::move(characters);
+    const QString league = m_settings.league();
     for (const auto& character : *m_character_list) {
-        if (0 == m_current_league.compare(character.league.value_or(""), Qt::CaseInsensitive)) {
+        if (0 == league.compare(character.league.value_or(""), Qt::CaseInsensitive)) {
             ++m_characters_pending;
             m_endpoint_manager.getCharacter(character.name);
         };
@@ -187,23 +217,20 @@ void MainWindow::receiveCharacter(std::shared_ptr<poe_api::Character> character)
     };
     --m_characters_pending;
     m_league_data.storeCharacter(*character);
-    m_tree_model.appendCharacter(*character);
-    m_tree_view.reset();
+    m_tree_model.appendCharacter(*character); 
     m_characters[character->id] = character;
-    if (refreshComplete()) {
-        finishRefresh();
-    };
-    m_status_label.setText(QString("Pending %1 stash tabs and %2 characters").arg(
+    m_status_label.setText(QString("Waiting to receive %1 stash tabs and %2 characters").arg(
         QString::number(m_stashes_pending),
         QString::number(m_characters_pending)));
 }
 
 void MainWindow::receiveStashList(std::shared_ptr<std::vector<poe_api::StashTab>> stashes)
 {
+    const QString league = m_settings.league();
     m_stash_list = stashes;
     for (const auto& stash : *stashes) {
         ++m_stashes_pending;
-        m_endpoint_manager.getStash(m_current_league, stash.id);
+        m_endpoint_manager.getStash(league, stash.id);
         if (stash.children) {
             QLOG_ERROR() << "Stash list has children:" << stash.name;
         };
@@ -217,31 +244,21 @@ void MainWindow::receiveStash(std::shared_ptr<poe_api::StashTab> stash)
     };
     --m_stashes_pending;
     if (stash->children) {
+        const QString league = m_settings.league();
         for (const auto& child : stash->children.value()) {
-            continue;
+            continue; 
+            // TODO
             ++m_stashes_pending;
-            m_endpoint_manager.getStash(m_current_league, stash->id, child.id);
+            m_endpoint_manager.getStash(league, stash->id, child.id);
             if (child.children) {
                 QLOG_ERROR() << "Stash has grandchildren:" << stash->name;
             };
         };
     };
+    m_league_data.storeStash(*stash);
     m_tree_model.appendStash(*stash);
     m_stashes[stash->id] = stash;
-    if (refreshComplete()) {
-        finishRefresh();
-    };
-    m_status_label.setText(QString("Pending %1 stash tabs and %2 characters").arg(
+    m_status_label.setText(QString("Waiting to receive %1 stash tabs and %2 characters").arg(
         QString::number(m_stashes_pending),
         QString::number(m_characters_pending)));
-}
-
-bool MainWindow::refreshComplete()
-{
-    return (m_characters_pending == 0) && (m_stashes_pending == 0);
-}
-
-void MainWindow::finishRefresh()
-{
-    m_status_label.setText("Refresh complete");
 }

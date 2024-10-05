@@ -107,7 +107,6 @@ int TreeNode::row() const
 
 int TreeNode::columnCount() const
 {
-    return 2;
     switch (m_node_type) {
     case NodeType::Item:
         return 2;

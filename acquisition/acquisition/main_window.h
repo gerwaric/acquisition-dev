@@ -21,8 +21,8 @@
 #include <acquisition/api_types/character.h>
 #include <acquisition/api_types/league.h>
 #include <acquisition/api_types/stash_tab.h>
-#include <acquisition/db/global_data_store.h>
-#include <acquisition/db/league_data_store.h>
+#include <acquisition/databases/league_database.h>
+#include <acquisition/databases/user_database.h>
 #include <acquisition/endpoint_manager.h>
 #include <acquisition/main_window.h>
 #include <acquisition/oauth/oauth_manager.h>
@@ -48,11 +48,10 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    explicit MainWindow();
+    explicit MainWindow(const QString& data_directory);
 
 
  signals:
-    void leagueChanged(const QString& league);
     void showRateLimitStatus();
 
 public slots:
@@ -71,24 +70,21 @@ public slots:
 private:
 
     void setupUserInterface();
-
+    void connectSlots();
     void authenticate();
-
-    bool refreshComplete();
-    void finishRefresh();
 
     static const OAuthSettings s_oauth_settings;
 
     QNetworkAccessManager m_network_manager;
 
     Settings m_settings;
-    LeagueDataStore m_league_data;
+    UserDatabase m_user_data;
+    LeagueDatabase m_league_data;
     OAuthManager m_oauth_manager;
     RateLimiter m_rate_limiter;
     EndpointManager m_endpoint_manager;
 
-    QString m_current_league;
-    QAction* m_current_league_action{ nullptr };
+    QAction* m_active_league_action{ nullptr };
 
     QStringList m_league_list;
     std::shared_ptr<std::vector<poe_api::Character>> m_character_list;

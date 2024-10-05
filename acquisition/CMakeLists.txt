@@ -34,10 +34,10 @@ target_sources(acquisition PRIVATE
 target_sources(acquisition PRIVATE
     #"acquisition/db/data_store.cpp"
     #"acquisition/db/data_store.h"
-    "acquisition/db/global_data_store.h"
-    "acquisition/db/global_data_store.cpp"
-    "acquisition/db/league_data_store.cpp"
-    "acquisition/db/league_data_store.h"
+    "acquisition/databases/league_database.cpp"
+    "acquisition/databases/league_database.h"
+    "acquisition/databases/user_database.h"
+    "acquisition/databases/user_database.cpp"
 )
 
 # Utils

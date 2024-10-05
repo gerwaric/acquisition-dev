@@ -1,9 +1,5 @@
 #include <acquisition/utils/utils.h>
 
-namespace {
-    
-}
-
 namespace utils {
 
     QByteArray replace_obsolete_timezones(const QByteArray& date)
@@ -37,13 +33,46 @@ namespace utils {
         return utils::replace_obsolete_timezones(QByteArray::fromStdString(date)).toStdString();
     }
 
-    QDateTime parseRFC2822(const QByteArray& date) {
+    QDateTime parseRFC2822(const QByteArray& date)
+    {
         const QByteArray fixed_date = replace_obsolete_timezones(date);
         return QDateTime::fromString(fixed_date, Qt::RFC2822Date);
     }
 
-    QDateTime parseRFC2822(const std::string& date) {
+    QDateTime parseRFC2822(const std::string& date)
+    {
         return parseRFC2822(QByteArray::fromStdString(date));
     }
+
+    QsLogging::Level logLevel(const QString& value)
+    {
+        if (0 == value.compare("TRACE", Qt::CaseInsensitive)) return QsLogging::TraceLevel;
+        if (0 == value.compare("DEBUG", Qt::CaseInsensitive)) return QsLogging::DebugLevel;
+        if (0 == value.compare("INFO", Qt::CaseInsensitive)) return QsLogging::InfoLevel;
+        if (0 == value.compare("WARN", Qt::CaseInsensitive)) return QsLogging::WarnLevel;
+        if (0 == value.compare("ERROR", Qt::CaseInsensitive)) return QsLogging::ErrorLevel;
+        if (0 == value.compare("FATAL", Qt::CaseInsensitive)) return QsLogging::FatalLevel;
+        if (0 == value.compare("OFF", Qt::CaseInsensitive)) return QsLogging::OffLevel;
+        QLOG_ERROR() << "Invalid logging level:" << value;
+        return QsLogging::InfoLevel;
+    }
+
+    QString logLevelName(QsLogging::Level level)
+    {
+        switch (level) {
+        case QsLogging::TraceLevel: return "TRACE"; break;
+        case QsLogging::DebugLevel: return "DEBUG"; break;
+        case QsLogging::InfoLevel: return "INFO"; break;
+        case QsLogging::WarnLevel: return "WARN"; break;
+        case QsLogging::ErrorLevel: return "ERROR"; break;
+        case QsLogging::FatalLevel: return "FATAL"; break;
+        case QsLogging::OffLevel: return "OFF"; break;
+        default:
+            QLOG_ERROR() << "Invalid logging level:" << level;
+            return "";
+        };
+
+    }
+
 
 }

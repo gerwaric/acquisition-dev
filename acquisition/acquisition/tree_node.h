@@ -56,17 +56,20 @@ private:
     enum class ItemType { None, Equipable, Stackable, Other };
 
     static long unsigned s_node_count;
+
     const long unsigned m_id;
-
     const NodeType m_node_type;
-    const ItemType m_item_type;
     const TreeNode* m_parent;
-
-    const poe_api::Item* m_item{ nullptr };
-    const poe_api::StashTab* m_stash{ nullptr };
-    const poe_api::Character* m_character{ nullptr };
-    const QString m_name;
-
     std::vector<std::unique_ptr<TreeNode>> m_children;
+
+    const QString m_name;
+    const poe_api::Character* m_character{ nullptr };
+    const poe_api::StashTab* m_stash{ nullptr };
+    const poe_api::Item* m_item{ nullptr };
+    const ItemType m_item_type;
+
+    void* m_item_timestamp;
+    void* m_item_pseudomods;
+    void* m_item_buyout;
 
 };
