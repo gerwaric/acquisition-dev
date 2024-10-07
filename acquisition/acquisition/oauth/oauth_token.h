@@ -52,6 +52,7 @@ public:
     std::optional<QDateTime> birthday;
     std::optional<QDateTime> expiration;
 
-    JS_OBJ(access_token, expires_in, token_type, scope, sub, username, refresh_token);
+    JS_OBJ(access_token, expires_in, token_type, scope, sub,
+        username, refresh_token, birthday, expiration);
 
 };

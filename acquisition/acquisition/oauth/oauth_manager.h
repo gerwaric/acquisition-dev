@@ -42,6 +42,7 @@ public:
         const OAuthSettings& settings);
     void addAuthorization(QNetworkRequest& request) const;
 public slots:
+    void setToken(const OAuthToken& token);
     void requestAccess();
     void requestRefresh();
     void showStatus();

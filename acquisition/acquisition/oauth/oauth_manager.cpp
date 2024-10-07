@@ -72,6 +72,16 @@ void OAuthManager::addAuthorization(QNetworkRequest& request) const
     request.setRawHeader("Authorization", bearer.toUtf8());
 }
 
+void OAuthManager::setToken(const OAuthToken& token)
+{
+    if (!token.isValid()) {
+        QLOG_ERROR() << "OAuthManager: token is invalid";
+        return;
+    };
+    m_token = std::make_unique<OAuthToken>(token);
+    emit accessGranted(token);
+}
+
 void OAuthManager::setRefreshTimer()
 {
     QLOG_TRACE() << "OAuthManager::setRefreshTimer() entered";

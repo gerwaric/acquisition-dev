@@ -15,7 +15,7 @@
 class LeagueDatabase : public QObject {
     Q_OBJECT
 public:
-    LeagueDatabase(QObject *parent);
+    LeagueDatabase(QObject *parent, const QString& data_directory);
 
     QStringList getCharacterList();
     QStringList getStashList();
@@ -33,6 +33,9 @@ public slots:
 
 private:
 
+    QString generateHash(const QString& data);
+
+    QString m_data_directory;
     QString m_username;
     QString m_league;
     QSqlDatabase m_db;

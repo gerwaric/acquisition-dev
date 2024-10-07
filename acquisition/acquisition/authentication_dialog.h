@@ -14,11 +14,12 @@ public:
     explicit AuthenticationDialog();
 signals:
     void requested();
-    void complete();
 public slots:
     void setToken(const OAuthToken& token);
 private:
     QLabel m_upper_label;
     QPushButton m_authenticate_button;
-    QPushButton m_proceed_button;
+    QPushButton m_offline_button;
+    QPushButton m_continue_button;
+    bool m_authenticated{ false };
 };

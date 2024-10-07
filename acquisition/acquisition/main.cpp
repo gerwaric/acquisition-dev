@@ -68,12 +68,14 @@ int main(int argc, char* argv[])
 
     QsLogging::Logger& logger = QsLogging::Logger::instance();
     logger.setLoggingLevel(logging_level);
+    logger.setLoggingLevel(QsLogging::TraceLevel);
     logger.addDestination(QsLogging::DestinationFactory::MakeDebugOutputDestination());
     logger.addDestination(QsLogging::DestinationFactory::MakeFileDestination(log_filename,
         QsLogging::EnableLogRotation,
         QsLogging::MaxSizeBytes(10 * 1024 * 1024),
         QsLogging::MaxOldLogCount(0)));
 
+    QLOG_INFO() << "----------------------------------------------------------";
     QLOG_INFO() << "Starting " APP_NAME " version " APP_VERSION_STRING;
 
     MainWindow main_window(data_directory);

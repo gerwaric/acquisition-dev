@@ -45,17 +45,27 @@ MainWindow::MainWindow(const QString& data_directory)
     : QMainWindow(nullptr)
     , m_network_manager(this)
     , m_settings(this, data_directory)
-    , m_user_data(this)
-    , m_league_data(this)
+    , m_user_data(this, data_directory)
+    , m_league_data(this, data_directory)
     , m_oauth_manager(this, m_network_manager, s_oauth_settings)
     , m_rate_limiter(this, m_network_manager)
     , m_endpoint_manager(this, m_rate_limiter)
 {
+    if (!m_settings.username().isEmpty()) {
+        m_user_data.setUsername(m_settings.username());
+        m_league_data.setUsername(m_settings.league());
+    };
+    if (!m_settings.league().isEmpty()) {
+        m_league_data.setLeague(m_settings.league());
+    };
+
+    OAuthToken token = m_user_data.getStruct<OAuthToken>("oauth_token");
+    if (token.isValid()) {
+        m_oauth_manager.setToken(token);
+    };
+
     setupUserInterface();
     connectSlots();
-
-    m_settings.sendSignals();
-
     show();
     authenticate();
 }
@@ -118,6 +128,7 @@ void MainWindow::connectSlots()
     connect(&m_oauth_manager, &OAuthManager::accessGranted, this,
         [&](const OAuthToken& token) {
             m_settings.setUsername(token.username);
+            m_user_data.setStruct("oauth_token", token);
         });
 
     connect(&m_settings, &Settings::usernameChanged, &m_user_data, &UserDatabase::setUsername);
@@ -148,9 +159,10 @@ void MainWindow::authenticate()
     int result = login.exec();
     disconnect(&login, &AuthenticationDialog::requested, &m_oauth_manager, nullptr);
     disconnect(&m_oauth_manager, &OAuthManager::accessGranted, &login, nullptr);
-
     if (result == QDialog::Accepted) {
         m_endpoint_manager.getLeagues();
+    } else {
+        //receiveLeagueList(existingLeagues);
     };
 
     activateWindow();
@@ -159,6 +171,8 @@ void MainWindow::authenticate()
 
 void MainWindow::receiveLeagueList(std::shared_ptr<std::vector<poe_api::League>> leagues)
 {
+    const QString saved_league = m_settings.league();
+
     m_league_menu.clear();
     for (const auto& league : *leagues) {
 
@@ -171,7 +185,7 @@ void MainWindow::receiveLeagueList(std::shared_ptr<std::vector<poe_api::League>>
 
         QAction* action = new QAction(pretty_name, &m_league_menu);
         action->setCheckable(true);
-        action->setChecked(false);
+        action->setChecked(0 == saved_league.compare(league_name, Qt::CaseInsensitive));
         
         connect(action, &QAction::triggered, this,
             [=]() {
@@ -205,6 +219,7 @@ void MainWindow::receiveCharacterList(std::shared_ptr<std::vector<poe_api::Chara
     for (const auto& character : *m_character_list) {
         if (0 == league.compare(character.league.value_or(""), Qt::CaseInsensitive)) {
             ++m_characters_pending;
+            QLOG_INFO() << "Getting character" << character.name << "in" << league;
             m_endpoint_manager.getCharacter(character.name);
         };
     };
@@ -230,6 +245,7 @@ void MainWindow::receiveStashList(std::shared_ptr<std::vector<poe_api::StashTab>
     m_stash_list = stashes;
     for (const auto& stash : *stashes) {
         ++m_stashes_pending;
+        QLOG_INFO() << "Getting" << stash.name << "(" + stash.id + ") in" << league;
         m_endpoint_manager.getStash(league, stash.id);
         if (stash.children) {
             QLOG_ERROR() << "Stash list has children:" << stash.name;
@@ -243,11 +259,13 @@ void MainWindow::receiveStash(std::shared_ptr<poe_api::StashTab> stash)
         return;
     };
     --m_stashes_pending;
+    m_league_data.storeStash(*stash);
+    m_tree_model.appendStash(*stash);
+    m_stashes[stash->id] = stash;
     if (stash->children) {
         const QString league = m_settings.league();
         for (const auto& child : stash->children.value()) {
-            continue; 
-            // TODO
+            continue;
             ++m_stashes_pending;
             m_endpoint_manager.getStash(league, stash->id, child.id);
             if (child.children) {
@@ -255,9 +273,6 @@ void MainWindow::receiveStash(std::shared_ptr<poe_api::StashTab> stash)
             };
         };
     };
-    m_league_data.storeStash(*stash);
-    m_tree_model.appendStash(*stash);
-    m_stashes[stash->id] = stash;
     m_status_label.setText(QString("Waiting to receive %1 stash tabs and %2 characters").arg(
         QString::number(m_stashes_pending),
         QString::number(m_characters_pending)));

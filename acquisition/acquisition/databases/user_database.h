@@ -14,7 +14,7 @@
 class UserDatabase : public QObject {
     Q_OBJECT
 public:
-    UserDatabase(QObject* parent);
+    UserDatabase(QObject* parent, const QString& data_directory);
 
     void setInt(const QString& name, int value);
     int getInt(const QString& name);
@@ -56,6 +56,7 @@ private:
     QVariant getValue(const QString& name);
     void setValue(const QString& name, const QVariant& value);
 
+    QString m_data_directory;
     QString m_username;
     QString m_league;
     QSqlDatabase m_db;

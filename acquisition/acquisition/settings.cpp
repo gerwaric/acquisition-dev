@@ -2,6 +2,8 @@
 
 #include <acquisition/utils/utils.h>
 
+#include <QsLog/QsLog.h>
+
 #include <QDir>
 #include <QStandardPaths>
 
@@ -34,7 +36,7 @@ QString Settings::username() const
 
 QString Settings::league() const
 {
-    return m_settings->value("username").toString();
+    return m_settings->value("league").toString();
 }
 
 QString Settings::sessionId() const
@@ -51,8 +53,9 @@ QsLogging::Level Settings::logLevel() const
 void Settings::setUsername(const QString& username)
 {
     const QString previous_value = m_settings->value("username").toString();
-    m_settings->setValue("username", username);
     if (previous_value != username) {
+        QLOG_INFO() << "Changing username to" << username;
+        m_settings->setValue("username", username);
         emit usernameChanged(username);
     };
 }
@@ -60,8 +63,9 @@ void Settings::setUsername(const QString& username)
 void Settings::setLeague(const QString& league)
 {
     const QString previous_value = m_settings->value("league").toString();
-    m_settings->setValue("league", league);
     if (previous_value != league) {
+        QLOG_INFO() << "Changing league to" << league;
+        m_settings->setValue("league", league);
         emit leagueChanged(league);
     };
 }
@@ -69,8 +73,9 @@ void Settings::setLeague(const QString& league)
 void Settings::setSessionId(const QString& session_id)
 {
     const QString previous_value = m_settings->value("session_id").toString();
-    m_settings->setValue("session_id", session_id);
     if (previous_value != session_id) {
+        QLOG_INFO() << "Changing session id";
+        m_settings->setValue("session_id", session_id);
         emit sessionIdChanged(session_id);
     };
 }
@@ -80,7 +85,8 @@ void Settings::setLogLevel(QsLogging::Level level)
     const QString previous_value = m_settings->value("logging_level").toString();
     const QString next_value = utils::logLevelName(level);
     if (0 != previous_value.compare(next_value, Qt::CaseInsensitive)) {
-        m_settings->setValue("log_level", next_value);
+        QLOG_INFO() << "Changing log level to" << next_value;
+        m_settings->setValue("log_level", next_value); 
         emit logLevelChanged(level);
     };
 }

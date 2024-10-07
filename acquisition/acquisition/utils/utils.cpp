@@ -23,6 +23,7 @@ namespace utils {
             const char* offset = pair.second;
             if (fixed.endsWith(zone)) {
                 fixed = date.chopped(std::strlen(zone)) + offset;
+                return fixed;
             };
         };
         return fixed;

@@ -71,5 +71,4 @@ private:
     void* m_item_timestamp;
     void* m_item_pseudomods;
     void* m_item_buyout;
-
 };
